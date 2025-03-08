@@ -9,6 +9,10 @@ Usage:
 Options:
     -p, --path     Path to the directory to process.
     -w, --words    Rename using a random sequence of 4 English words instead of UUID4.
+
+Dependencies:
+    - Python 3.x
+    - Internet connection (if using word-based renaming, as it downloads a word list)
 """
 
 import argparse
@@ -22,10 +26,10 @@ from typing import List, Callable, NoReturn
 WORD_LIST_URL = "https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt"
 
 def generate_uuid_name(ext: str = "") -> str:
-    """Generate a new UUID4-based name with an optional extension.
+    """Generate a new UUID4-based name with an optional file extension.
 
     Args:
-        ext (str): The file extension (including the dot) to append.
+        ext (str, optional): The file extension (including the dot) to append. Defaults to "".
 
     Returns:
         str: A string combining the UUID and the extension.
@@ -39,7 +43,7 @@ def generate_words_name(word_list: List[str], ext: str = "") -> str:
 
     Args:
         word_list (List[str]): List of English words to sample from.
-        ext (str): The file extension (including the dot) to append.
+        ext (str, optional): The file extension (including the dot) to append. Defaults to "".
 
     Returns:
         str: A string in the format "word1-word2-word3-word4" with the extension appended if provided.
@@ -56,6 +60,9 @@ def get_word_list(url: str) -> List[str]:
 
     Returns:
         List[str]: A list of English words.
+
+    Raises:
+        SystemExit: If an error occurs during the download.
     """
     try:
         with urllib.request.urlopen(url) as response:
@@ -64,7 +71,7 @@ def get_word_list(url: str) -> List[str]:
         return words
     except Exception as e:
         print(f"Error downloading word list: {e}")
-        exit(1)
+        exit(1)  # Exit with an error code
 
 def rename_files_and_directories(root_path: str, name_generator: Callable[[str], str]) -> None:
     """Recursively rename all files and directories in the given root path using the provided naming function.
@@ -127,6 +134,7 @@ def main() -> NoReturn:
     """
     args = parse_arguments()
 
+    # Validate that the provided path exists and is a directory.
     if not os.path.exists(args.path):
         print(f"Error: The provided path does not exist: {args.path}")
         exit(1)
@@ -134,14 +142,13 @@ def main() -> NoReturn:
         print(f"Error: The provided path is not a directory: {args.path}")
         exit(1)
 
+    # Determine which naming function to use.
     if args.words:
         print("Downloading word list...")
         word_list = get_word_list(WORD_LIST_URL)
-        # Define naming function using words.
-        name_generator = lambda ext: generate_words_name(word_list, ext)
+        name_generator = lambda ext: generate_words_name(word_list, ext)  # Use word-based naming
     else:
-        # Use UUID naming.
-        name_generator = generate_uuid_name
+        name_generator = generate_uuid_name  # Use UUID-based naming
 
     rename_files_and_directories(args.path, name_generator)
     print("Renaming completed successfully.")
